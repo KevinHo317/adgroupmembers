@@ -1,0 +1,37 @@
+#This is export AD group with member's Name,Title and department.
+  
+#write-host 'Type-in the OU DN.' $OrgUnit -ForegroundColor Yellow
+#$OrgUnit = Read-host 'Type-in the OU :'
+#$OrgUnit = 'OU=HKHS_Users,DC=hkhs,DC=com'
+
+# Get Active Directory groups from a specific Organizational Unit
+write-host 'Processing to get AD group from OU :' $($env:OrgUnit) -ForegroundColor Yellow
+$AD_Groups = Get-ADGroup -Filter * -Properties * -SearchBase $($env:OrgUnit) 
+write-host 'Completed to get AD group from OU :' $($env:OrgUnit)  -ForegroundColor Green
+$cnt = ($AD_Groups).count
+$k = 1
+
+
+# Search through AD_Groups variable and get AD group name and member user name
+$AD_Group_Members = foreach ($Group in $AD_Groups) {
+write-host 'Processing to get the' $group.SamAccountName 'group member.' -ForegroundColor Yellow
+Get-ADGroupMember -Identity $Group.SamAccountName | 
+Where-Object {$_.objectClass -eq "User"} | 
+get-aduser -Properties * |
+Where-Object {$_.objectClass -eq "User"} |
+Select-Object @{Name='Group';Expression={$Group.Name}},
+              #@{Name='GroupCategory';Expression={$AD_Groups.GroupCategory}},
+              #@{Name='GroupDescription';Expression={$AD_Groups.Description}},
+              @{Name='Member';Expression={$_.Name}},
+              @{Name='Title';Expression={$_.Title}},
+              @{Name='department';Expression={$_.department}}
+write-host 'Completed export the' $group.SamAccountName 'group member.' -ForegroundColor Green
+write-host 'Completed export groupmember' $k'/'$cnt 'Groups'-ForegroundColor Magenta
+$k = $k + 1
+}
+
+# Export groups and users to csv file from AD_Group_Members variable
+write-host 'Processing Export to CSV.....' -ForegroundColor Yellow
+$AD_Group_Members | Export-Csv -Path 'C:\TEMP\scripts\Export_members\AD_Group_Members.csv' -NoTypeInformation
+write-host 'The file export to C:\TEMP\scripts\Export_members\AD_Group_Members.csv' -ForegroundColor Green
+#start C:\temp\scripts\Export_members
